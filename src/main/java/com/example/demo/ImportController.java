@@ -9,28 +9,20 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.concurrent.*;
 
+@CrossOrigin("*")
 @RestController
 public class ImportController {
 
     @Autowired private UploadService uploadService;
-/*
-    @GetMapping("/greeting")
-    public String greeting(@RequestParam(name="name", required=false, defaultValue="World") String name, Model model) {
-        model.addAttribute("name", name);
-        return "greeting";
-    }*/
-
-    @PostMapping("/upload")
-    public String uploadFile(@RequestParam("file") MultipartFile file, RedirectAttributes attributes) {
-        System.out.println("how");
-        return "the fuck";
-    }
 
     @PostMapping("/upload-csv-file")
-    public Long saveCsv(@RequestParam("file") MultipartFile file, Model model) { //Not async I don't think
+    public Long saveCsv(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("hasHeader") Boolean hasHeader,
+            Model model) {
         Callable<Long> task = () -> {
             try {
-                return uploadService.runImport(file, model);
+                return uploadService.runImport(file, hasHeader, model);
             }
             catch (Exception e) {
                 throw new IllegalStateException("task interrupted", e); //Bad error

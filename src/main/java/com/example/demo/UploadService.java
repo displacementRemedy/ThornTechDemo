@@ -31,7 +31,7 @@ public class UploadService {
     @Autowired private ResultRepo resultRepo;
     @Autowired private UserRepo userRepo;
 
-    public Long runImport(MultipartFile file, Model model) {
+    public Long runImport(MultipartFile file, Boolean hasHeader, Model model) {
 
         // validate file
         if (file.isEmpty()) {
@@ -42,7 +42,8 @@ public class UploadService {
 
             //Define total row size
             Long total = 0L;
-            //TODO ask if there's a header or not - I'm gonna assume it doesn't matter for the exercise and say yes
+
+            //TODO should this happen before or after saving the initial result state? If a file is not readable should it have a history entry?
             try {
                 InputStream inputStream = file.getInputStream();
                 total = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
@@ -69,7 +70,7 @@ public class UploadService {
             result = resultRepo.save(result);
 
             ExecutorService executor = Executors.newFixedThreadPool(1);
-            executor.submit(new UploadRunnable(result, total, file));
+            executor.submit(new UploadRunnable(result, total, file, hasHeader));
 
             return result.getId();
         }
@@ -88,18 +89,20 @@ public class UploadService {
         private UploadResult result;
         private Long total;
         private MultipartFile file;
+        private Boolean hasHeader;
 
-        public UploadRunnable(UploadResult result, Long total, MultipartFile file) {
+        public UploadRunnable(UploadResult result, Long total, MultipartFile file, Boolean hasHeader) {
             this.result = result;
             this.total = total;
             this.file = file;
+            this.hasHeader = hasHeader;
         }
 
         @Override
         public void run() {
             try (
                     Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
-                    CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build();
+                    CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(hasHeader ? 1 : 0).build();
             ) {
 
                 //Define variables
